@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getProject, updateProject, deleteProject } from '../services/project'
+import { createInspiration } from '../services/inspiration'
 import Button from '../components/Button'
 import styles from './ProjectDetail.module.css'
 
@@ -9,6 +10,7 @@ const ProjectDetail = () => {
   const [isEditing, setIsEditing] = useState(false)
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
+  const [url, setUrl] = useState('')
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -37,6 +39,21 @@ const ProjectDetail = () => {
       await deleteProject(id)
       navigate('/projects')
     }
+  }
+
+  const handleAddInspiration = async () => {
+    if (!url.trim()) return
+    const newInspiration = await createInspiration({
+      projectId: id,
+      websiteMetadata: { url: url.trim() },
+      screenshot_uri: '',
+      notes: '',
+    })
+    setProject({
+      ...project,
+      inspirations: [...(project.inspirations || []), newInspiration],
+    })
+    setUrl('')
   }
 
   if (!project) {
@@ -91,6 +108,17 @@ const ProjectDetail = () => {
             ) : (
               <p>No inspirations added yet.</p>
             )}
+            <div className={styles.addTaskForm}>
+              <input
+                className={styles.input}
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                placeholder="Enter URL"
+              />
+              <Button className={styles.addButton} onClick={handleAddInspiration}>
+                Add Inspiration
+              </Button>
+            </div>
           </div>
           <div className={styles.buttonContainer}>
             <Button className={styles.editButton} onClick={handleEdit}>Edit Project</Button>
