@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getProject, updateProject, deleteProject } from '../services/project'
-import { createInspiration } from '../services/inspiration'
+import { createInspiration, updateInspiration, deleteInspiration } from '../services/inspiration'
 import Button from '../components/Button'
 import styles from './ProjectDetail.module.css'
 
@@ -11,6 +11,8 @@ const ProjectDetail = () => {
   const [name, setName] = useState('')
   const [description, setDescription] = useState('')
   const [url, setUrl] = useState('')
+  const [editingInspirationId, setEditingInspirationId] = useState(null)
+  const [editingUrl, setEditingUrl] = useState('')
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -56,6 +58,26 @@ const ProjectDetail = () => {
     setUrl('')
   }
 
+  const handleUpdateUrl = async (inspirationId, newUrl) => {
+    await updateInspiration(inspirationId, { websiteMetadata: { url: newUrl } })
+    setProject({
+      ...project,
+      inspirations: project.inspirations.map((i) =>
+        i.id === inspirationId ? { ...i, websiteMetadata: { ...i.websiteMetadata, url: newUrl } } : i
+      ),
+    })
+  }
+
+  const handleDeleteInspiration = async (inspirationId) => {
+    if (window.confirm('Delete this inspiration?')) {
+      await deleteInspiration(inspirationId)
+      setProject({
+        ...project,
+        inspirations: project.inspirations.filter((i) => i.id !== inspirationId),
+      })
+    }
+  }
+
   if (!project) {
     return <div>Loading...</div>
   }
@@ -99,9 +121,36 @@ const ProjectDetail = () => {
             {project.inspirations?.length > 0 ? (
               <ul className={styles.inspirationList}>
                 {project.inspirations.map((inspiration) => (
-                  <li key={inspiration.id}>
-                    {inspiration.websiteMetadata.title ||
-                      inspiration.websiteMetadata.url}
+                  <li key={inspiration.id} className={styles.taskItem}>
+                    {editingInspirationId === inspiration.id ? (
+                      <>
+                        <input
+                          className={styles.input}
+                          value={editingUrl}
+                          onChange={(e) => setEditingUrl(e.target.value)}
+                        />
+                        <Button onClick={() => setEditingInspirationId(null)}>Cancel</Button>
+                        <Button className={styles.editButton} onClick={() => {
+                          handleUpdateUrl(inspiration.id, editingUrl)
+                          setEditingInspirationId(null)
+                        }}>Save</Button>
+                      </>
+                    ) : (
+                      <>
+                        <span className={styles.taskText}>
+                          {inspiration.websiteMetadata.url}
+                        </span>
+                        <Button className={styles.editButton} onClick={() => {
+                          setEditingInspirationId(inspiration.id)
+                          setEditingUrl(inspiration.websiteMetadata.url)
+                        }}>
+                          Edit
+                        </Button>
+                        <Button className={styles.deleteButton} onClick={() => handleDeleteInspiration(inspiration.id)}>
+                          Delete
+                        </Button>
+                      </>
+                    )}
                   </li>
                 ))}
               </ul>
