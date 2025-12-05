@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { getProject, updateProject, deleteProject } from '../services/project'
 import { createInspiration, updateInspiration, deleteInspiration } from '../services/inspiration'
+import { rewriteDescription } from '../services/ai'
 import Button from '../components/Button'
 import styles from './ProjectDetail.module.css'
 
@@ -13,6 +14,8 @@ const ProjectDetail = () => {
   const [url, setUrl] = useState('')
   const [editingInspirationId, setEditingInspirationId] = useState(null)
   const [editingUrl, setEditingUrl] = useState('')
+  const [isGeneratingAI, setIsGeneratingAI] = useState(false)
+  const [aiError, setAiError] = useState(null)
   const { id } = useParams()
   const navigate = useNavigate()
 
@@ -28,12 +31,33 @@ const ProjectDetail = () => {
     setName(project.name)
     setDescription(project.description)
     setIsEditing(true)
+    setAiError(null)
   }
 
   const handleSave = async () => {
     const updated = await updateProject(id, { name, description })
     setProject(updated)
     setIsEditing(false)
+    setAiError(null)
+  }
+
+  const handleRewriteWithAI = async () => {
+    if (!description.trim()) {
+      setAiError('Please enter a description first')
+      return
+    }
+    
+    setIsGeneratingAI(true)
+    setAiError(null)
+    
+    try {
+      const rewrittenDescription = await rewriteDescription(description)
+      setDescription(rewrittenDescription)
+    } catch (error) {
+      setAiError(error.message || 'Failed to generate description')
+    } finally {
+      setIsGeneratingAI(false)
+    }
   }
 
   const handleDelete = async () => {
@@ -90,12 +114,24 @@ const ProjectDetail = () => {
             className={styles.input}
             value={name}
             onChange={(e) => setName(e.target.value)}
+            placeholder="Project name"
           />
           <textarea
             className={styles.input}
             value={description}
             onChange={(e) => setDescription(e.target.value)}
+            placeholder="Project description"
+            rows={4}
           />
+          <div>
+            <Button 
+              onClick={handleRewriteWithAI}
+              disabled={isGeneratingAI}
+            >
+              {isGeneratingAI ? 'Generating...' : 'Rewrite with AI'}
+            </Button>
+            {aiError && <p style={{ color: 'red' }}>{aiError}</p>}
+          </div>
           <div className={styles.buttonContainer}>
             <Button onClick={() => setIsEditing(false)}>Cancel</Button>
             <Button className={styles.editButton} onClick={handleSave}>Save</Button>
